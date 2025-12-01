@@ -12,6 +12,8 @@ def status_view(request):
 def hello_view(request):
     return HttpResponse("Hello, Django!")
 
+def new_view(request):
+    return render(request, "win.html")
 def template_view(request):
     context = {"name": "Dhinesh"}
     return render(request, "hello.html", context)
