@@ -1,0 +1,49 @@
+# .github/workflows/cd.yml
+name: Continuous Deployment
+
+on:
+  push:
+    branches:
+      - develop  # Trigger CD to QA
+      - main     # Trigger CD to Production
+
+jobs:
+  deploy_qa:
+    name: Deploy to QA (Staging)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' # Only run on merge to develop
+
+    steps:
+      - name: Execute Remote Deployment Script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.QA_SSH_HOST }}
+          username: ${{ secrets.QA_SSH_USER }}
+          key: ${{ secrets.QA_SSH_PRIVATE_KEY }}
+          script: |
+            # 1. Update the local deploy script (if it changes)
+            # You would typically pull this from a separate repo or ensure it exists.
+            
+            # 2. Run the deployment script, passing the image tag (SHA) and environment type
+            ./deploy.sh ${{ github.sha }} QA
+            
+  deploy_prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment:
+      name: Production # Use GitHub Environments for protection rules
+    if: github.ref == 'refs/heads/main' # Only run on merge to main
+    needs: deploy_qa # Wait for QA to pass before allowing PROD deployment
+
+    steps:
+      - name: Execute Remote Deployment Script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }} # Would typically be a different server
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            # 1. Pull the image built from the approved main branch
+            
+            # 2. Run the deployment script with PROD parameters
+            ./deploy.sh ${{ github.sha }} PROD
